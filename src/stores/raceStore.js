@@ -1,0 +1,77 @@
+import { defineStore } from 'pinia'
+
+// 20 atın sabit listesi - her birinin adı, rengi ve condition skoru var
+const HORSE_POOL = [
+  { id: 1, name: 'Karayel', color: '#2c3e50', condition: 92 },
+  { id: 2, name: 'Rüzgar', color: '#3498db', condition: 78 },
+  { id: 3, name: 'Fırtına', color: '#7f8c8d', condition: 85 },
+  { id: 4, name: 'King', color: '#f39c12', condition: 61 },
+  { id: 5, name: 'Yavuz', color: '#c0392b', condition: 74 },
+  { id: 6, name: 'Şimşek', color: '#f1c40f', condition: 88 },
+  { id: 7, name: 'Star', color: '#9b59b6', condition: 55 },
+  { id: 8, name: 'Han', color: '#e67e22', condition: 69 },
+  { id: 9, name: 'Yıldırım', color: '#e74c3c', condition: 95 },
+  { id: 10, name: 'Soylu', color: '#1abc9c', condition: 72 },
+  { id: 11, name: 'Lord', color: '#2ecc71', condition: 83 },
+  { id: 12, name: 'Ateş', color: '#e91e63', condition: 67 },
+  { id: 13, name: 'Kara', color: '#1a1a2e', condition: 79 },
+  { id: 14, name: 'Princess', color: '#fd79a8', condition: 91 },
+  { id: 15, name: 'Bey', color: '#6c5ce7', condition: 58 },
+  { id: 16, name: 'Gülü', color: '#ff6b6b', condition: 86 },
+  { id: 17, name: 'Ağa', color: '#ca8a04', condition: 63 },
+  { id: 18, name: 'Captain', color: '#0984e3', condition: 76 },
+  { id: 19, name: 'Son of Wind', color: '#00b894', condition: 94 },
+  { id: 20, name: 'Baba', color: '#636e72', condition: 70 },
+]
+
+// Yarış mesafeleri sırayla - spec'te tanımlı, değiştirilemez
+const RACE_DISTANCES = [1200, 1400, 1600, 1800, 2000, 2200]
+
+export const useRaceStore = defineStore('race', {
+  state: () => ({
+    horses: HORSE_POOL, // tüm 20 at
+    currentRaceIndex: 0, // hangi yarıştayız (0-5)
+    selectedHorses: [], // bu yarış için seçilen 10 at
+    raceResults: [], // tamamlanan yarışların sonuçları [{race, distance, finishOrder}]
+    raceStatus: 'idle', // 'idle' | 'ready' | 'running' | 'finished' | 'tournament_over'
+  }),
+
+  getters: {
+    currentDistance: (state) => RACE_DISTANCES[state.currentRaceIndex],
+    totalRaces: () => RACE_DISTANCES.length,
+    isLastRace: (state) => state.currentRaceIndex === RACE_DISTANCES.length - 1,
+  },
+
+  actions: {
+    // 20 attan rastgele 10 at seç
+    generateProgram() {
+      const shuffled = [...this.horses].sort(() => Math.random() - 0.5)
+      this.selectedHorses = shuffled.slice(0, 10)
+      this.raceStatus = 'ready'
+    },
+
+    // Yarış sonucunu kaydet, sıradaki yarışa geç
+    saveRaceResult(finishOrder) {
+      this.raceResults.push({
+        race: this.currentRaceIndex + 1,
+        distance: this.currentDistance,
+        finishOrder,
+      })
+
+      if (this.isLastRace) {
+        this.raceStatus = 'tournament_over'
+      } else {
+        this.currentRaceIndex++
+        this.raceStatus = 'idle'
+      }
+    },
+
+    // Tournamentı sıfırla
+    resetTournament() {
+      this.currentRaceIndex = 0
+      this.selectedHorses = []
+      this.raceResults = []
+      this.raceStatus = 'idle'
+    },
+  },
+})
