@@ -65,7 +65,50 @@ src/
 
 ## Race Mechanics
 
-_To be filled after `raceMechanics.js` is written._
+### Formula
+
+The performance system lives in `src/utils/raceMechanics.js`.
+
+Each horse receives a **performance score** calculated fresh for every race:
+
+`performance = condition + staminaBonus + formBonus + noise`
+
+| Component      | Range       | Description                                              |
+| -------------- | ----------- | -------------------------------------------------------- |
+| `condition`    | 1–100       | Base score, degrades over the tournament                 |
+| `staminaBonus` | -20 to +25  | Depends on horse type × race distance                    |
+| `formBonus`    | -15, 0, +15 | 15% good day / 70% neutral / 15% bad day                 |
+| `noise`        | ±10         | Random external factors (track, weather, start position) |
+
+This is a **weighted RNG with stamina depletion** — not purely linear, not purely random. Condition is the anchor but upsets are always possible.
+
+### Stamina Types
+
+Each horse has a `staminaType` assigned in `src/stores/raceStore.js`:
+
+- **Sprint** → peaks at 1200m (+15), fades badly at 2200m (-20)
+- **Middle** → consistent across all distances (±5 max)
+- **Stayer** → slow starter at 1200m (-10), dominant at 2200m (+25)
+
+### Condition Decay & Recovery
+
+After each race, conditions update via `updateConditionsAfterRace()`:
+
+| Situation           | Condition Change                |
+| ------------------- | ------------------------------- |
+| Raced normally      | -5 to -15 depending on distance |
+| Did not race        | +3 (recovery)                   |
+| Injured during race | -25 to -35                      |
+
+Condition is clamped between 1–100 at all times.
+
+### Injury Risk
+
+Each horse has a **3% chance of injury** per race. An injured horse scores 0 performance (finishes last), loses 25–35 condition points, and can still be selected in future races but starts weakened.
+
+### Pre-race Odds
+
+Calculated in `calculateOdds()` — each horse's condition as a percentage of the total pool condition. Visual only, does not affect mechanics.
 
 ### Formula
 
