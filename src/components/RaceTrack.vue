@@ -1,0 +1,315 @@
+<template>
+  <div class="race-track">
+    <div v-if="store.raceStatus === 'idle'" class="empty-state">
+      <span class="empty-text">GENERATE PROGRAM TO BEGIN</span>
+    </div>
+
+    <div v-else class="track-container">
+      <div v-for="(horse, index) in store.selectedHorses" :key="horse.id" class="lane">
+        <div class="lane-number">{{ index + 1 }}</div>
+        <div class="lane-track" :class="{ 'is-injured': injuredHorses.has(horse.id) }">
+          <div class="finish-line"></div>
+
+          <div v-if="index === 0" class="distance-markers">
+            <div
+              v-for="marker in distanceMarkers"
+              :key="marker.label"
+              class="marker"
+              :style="{ left: marker.position + '%' }"
+            >
+              <div class="marker-line"></div>
+              <span class="marker-label">{{ marker.label }}</span>
+            </div>
+          </div>
+
+          <div
+            class="horse-runner"
+            :style="{
+              left: getPosition(horse.id) + '%',
+              color: horse.color,
+            }"
+          >
+            <span class="horse-icon">{{ injuredHorses.has(horse.id) ? '🚑' : '🐴' }}</span>
+            <span class="horse-label">{{ horse.name }}</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div v-if="store.raceStatus === 'tournament_over'" class="tournament-over">
+      <span class="over-title">TOURNAMENT COMPLETE</span>
+    </div>
+  </div>
+</template>
+
+<script setup>
+import { ref, watch, onUnmounted, computed } from 'vue'
+import { useRaceStore } from '../stores/raceStore'
+import { calculateRacePerformances, updateConditionsAfterRace } from '../utils/raceMechanics'
+
+const store = useRaceStore()
+
+const positions = ref({})
+const raceInterval = ref(null)
+const raceFinished = ref(false)
+const injuredHorses = ref(new Set())
+
+const distanceMarkers = computed(() => {
+  const distance = store.currentDistance
+  const markers = []
+  for (let m = 200; m < distance; m += 200) {
+    markers.push({
+      label: m + 'm',
+      position: (m / distance) * 85,
+    })
+  }
+  return markers
+})
+
+function getPosition(horseId) {
+  return positions.value[horseId] ?? 0
+}
+
+function initPositions() {
+  const pos = {}
+  store.selectedHorses.forEach((h) => {
+    pos[h.id] = 0
+  })
+  positions.value = pos
+  raceFinished.value = false
+  injuredHorses.value = new Set()
+}
+
+function startRace() {
+  if (raceInterval.value) clearInterval(raceInterval.value)
+
+  const performances = calculateRacePerformances(store.selectedHorses, store.currentDistance)
+
+  const speeds = {}
+  const injuryPoints = {}
+  const injuredSet = new Set()
+
+  performances.forEach((result) => {
+    speeds[result.horse.id] = result.performance
+    if (result.willBeInjured) {
+      // injuryPoint 0-1 arası, pistin %90'ına map ediyoruz
+      injuryPoints[result.horse.id] = result.injuryPoint * 90
+    }
+  })
+
+  const maxPerf = Math.max(...Object.values(speeds))
+
+  raceInterval.value = setInterval(() => {
+    let healthyAllFinished = true
+
+    store.selectedHorses.forEach((horse) => {
+      // Zaten sakatlanmışsa atla
+      if (injuredSet.has(horse.id)) return
+
+      const current = positions.value[horse.id] ?? 0
+
+      // Sakatlık noktasına geldi mi?
+      if (injuryPoints[horse.id] && current >= injuryPoints[horse.id]) {
+        injuredSet.add(horse.id)
+        injuredHorses.value = new Set(injuredSet)
+        return
+      }
+
+      if (current < 90) {
+        healthyAllFinished = false
+        const speed = (speeds[horse.id] / maxPerf) * 0.8 + Math.random() * 0.15
+        positions.value[horse.id] = Math.min(90, current + speed)
+      }
+    })
+
+    // Sağlıklı atların hepsi bitince yarışı tamamla
+    const healthyHorses = store.selectedHorses.filter((h) => !injuredSet.has(h.id))
+    const allHealthyDone = healthyHorses.every((h) => (positions.value[h.id] ?? 0) >= 90)
+
+    if (allHealthyDone) {
+      clearInterval(raceInterval.value)
+      raceInterval.value = null
+
+      const finishOrder = [...store.selectedHorses].sort((a, b) => {
+        const aPos = injuredSet.has(a.id) ? -1 : (positions.value[a.id] ?? 0)
+        const bPos = injuredSet.has(b.id) ? -1 : (positions.value[b.id] ?? 0)
+        return bPos - aPos
+      })
+
+      const injuredIds = [...injuredSet]
+
+      store.horses = updateConditionsAfterRace(
+        store.horses,
+        store.selectedHorses,
+        store.currentDistance,
+        injuredIds,
+      )
+
+      store.saveRaceResult(finishOrder)
+      raceFinished.value = true
+    }
+  }, 50)
+}
+
+function stopRace() {
+  if (raceInterval.value) {
+    clearInterval(raceInterval.value)
+    raceInterval.value = null
+  }
+}
+
+watch(
+  () => store.raceStatus,
+  (status) => {
+    if (status === 'ready') {
+      initPositions()
+    } else if (status === 'running') {
+      startRace()
+    } else if (status === 'idle') {
+      stopRace()
+    }
+  },
+)
+
+onUnmounted(() => {
+  stopRace()
+})
+</script>
+
+<style scoped>
+.race-track {
+  flex: 1;
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  overflow: hidden;
+}
+
+.empty-state {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+}
+
+.empty-text {
+  font-size: 11px;
+  letter-spacing: 3px;
+  color: #2a2a2a;
+}
+
+.track-container {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.lane {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.lane-number {
+  font-size: 10px;
+  color: #333;
+  font-family: monospace;
+  width: 16px;
+  text-align: right;
+}
+
+.lane-track {
+  flex: 1;
+  height: 28px;
+  background: #0f0f0f;
+  border: 1px solid #1a1a1a;
+  border-radius: 2px;
+  position: relative;
+  overflow: hidden;
+  transition: opacity 0.3s;
+}
+
+.lane-track.is-injured {
+  opacity: 0.4;
+  border-color: #e74c3c22;
+}
+
+.finish-line {
+  position: absolute;
+  right: 10%;
+  top: 0;
+  bottom: 0;
+  width: 1px;
+  background: #2a2a2a;
+}
+
+.distance-markers {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  pointer-events: none;
+}
+
+.marker {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.marker-line {
+  width: 1px;
+  height: 100%;
+  background: #1f1f1f;
+}
+
+.marker-label {
+  position: absolute;
+  bottom: 2px;
+  font-size: 7px;
+  color: #2a2a2a;
+  letter-spacing: 0.5px;
+  white-space: nowrap;
+}
+
+.horse-runner {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  transition: left 0.05s linear;
+  white-space: nowrap;
+}
+
+.horse-icon {
+  font-size: 14px;
+  filter: drop-shadow(0 0 4px currentColor);
+}
+
+.horse-label {
+  font-size: 9px;
+  letter-spacing: 1px;
+  color: currentColor;
+  opacity: 0.7;
+}
+
+.tournament-over {
+  text-align: center;
+  padding: 16px;
+  border-top: 1px solid #1a1a1a;
+  margin-top: 16px;
+}
+
+.over-title {
+  font-size: 13px;
+  letter-spacing: 4px;
+  color: #e74c3c;
+}
+</style>

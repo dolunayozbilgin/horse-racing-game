@@ -12,10 +12,11 @@
 
       <section class="panel panel-center">
         <RaceControls />
+        <RaceTrack />
       </section>
 
       <aside class="panel panel-right">
-        <!-- ResultsPanel buraya gelecek -->
+        <ResultsPanel />
       </aside>
     </main>
   </div>
@@ -24,6 +25,8 @@
 <script setup>
 import HorseList from './components/HorseList.vue'
 import RaceControls from './components/RaceControls.vue'
+import RaceTrack from './components/RaceTrack.vue'
+import ResultsPanel from './components/ResultsPanel.vue'
 </script>
 
 <style>
@@ -43,7 +46,8 @@ body {
 .app {
   display: flex;
   flex-direction: column;
-  min-height: 100vh;
+  height: 100vh;
+  overflow: hidden;
 }
 
 .app-header {
@@ -52,6 +56,7 @@ body {
   gap: 12px;
   padding: 24px 32px;
   border-bottom: 1px solid #2a2a2a;
+  flex-shrink: 0;
 }
 
 .app-title {
@@ -73,10 +78,19 @@ body {
   gap: 1px;
   flex: 1;
   background: #2a2a2a;
+  overflow: hidden;
 }
 
 .panel {
   background: #0d0d0d;
   padding: 24px;
+  overflow-y: auto;
+}
+
+.panel-center {
+  display: flex;
+  flex-direction: column;
+  padding: 0;
+  overflow: hidden;
 }
 </style>

@@ -18,8 +18,8 @@
     <div class="buttons">
       <button
         class="btn btn-secondary"
-        :disabled="store.raceStatus === 'running' || store.raceStatus === 'tournament_over'"
-        @click="store.generateProgram()"
+        :disabled="store.raceStatus === 'running'"
+        @click="handleGenerate"
       >
         GENERATE PROGRAM
       </button>
@@ -57,6 +57,11 @@ const startPauseLabel = computed(() => {
   if (store.raceStatus === 'finished') return 'NEXT RACE'
   return 'START'
 })
+
+function handleGenerate() {
+  store.resetTournament()
+  store.generateProgram()
+}
 
 function handleStartPause() {
   if (store.raceStatus === 'ready') {
