@@ -49,15 +49,28 @@ const store = useRaceStore()
 const tournamentWinner = computed(() => {
   if (store.raceResults.length === 0) return null
 
-  const points = {}
+  const totalRaces = store.raceResults.length
+  const stats = {}
+
   store.raceResults.forEach((result) => {
     result.finishOrder.forEach((horse, index) => {
-      if (!points[horse.id]) points[horse.id] = { horse, pts: 0 }
-      points[horse.id].pts += 10 - index
+      if (!stats[horse.id]) {
+        stats[horse.id] = { horse, totalPoints: 0, raceCount: 0 }
+      }
+      stats[horse.id].totalPoints += 10 - index
+      stats[horse.id].raceCount++
     })
   })
 
-  const sorted = Object.values(points).sort((a, b) => b.pts - a.pts)
+  const scored = Object.values(stats).map((entry) => {
+    const maxPossible = entry.raceCount * 10
+    const ratio = entry.totalPoints / maxPossible
+    const participationBonus = 1 + (entry.raceCount / totalRaces) * 0.2
+    const finalScore = ratio * 100 * participationBonus
+    return { ...entry, finalScore }
+  })
+
+  const sorted = scored.sort((a, b) => b.finalScore - a.finalScore)
   return sorted[0]?.horse ?? null
 })
 
