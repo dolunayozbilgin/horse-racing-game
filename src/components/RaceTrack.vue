@@ -35,6 +35,27 @@
           </div>
         </div>
       </div>
+
+      <!-- Pre-race odds — sadece ready durumunda göster -->
+      <div v-if="store.raceStatus === 'ready'" class="odds-panel">
+        <div class="odds-title">PRE-RACE ODDS</div>
+        <div class="odds-list">
+          <div v-for="odd in odds" :key="odd.horseId" class="odds-row">
+            <div class="odds-dot" :style="{ background: getHorseById(odd.horseId)?.color }"></div>
+            <span class="odds-name">{{ getHorseById(odd.horseId)?.name }}</span>
+            <div class="odds-bar-wrap">
+              <div
+                class="odds-bar"
+                :style="{
+                  width: odd.percentage + '%',
+                  background: getHorseById(odd.horseId)?.color,
+                }"
+              ></div>
+            </div>
+            <span class="odds-pct">{{ odd.percentage }}%</span>
+          </div>
+        </div>
+      </div>
     </div>
 
     <div v-if="store.raceStatus === 'tournament_over'" class="tournament-over">
@@ -46,7 +67,11 @@
 <script setup>
 import { ref, watch, onUnmounted, computed } from 'vue'
 import { useRaceStore } from '../stores/raceStore'
-import { calculateRacePerformances, updateConditionsAfterRace } from '../utils/raceMechanics'
+import {
+  calculateRacePerformances,
+  updateConditionsAfterRace,
+  calculateOdds,
+} from '../utils/raceMechanics'
 
 const store = useRaceStore()
 
@@ -66,6 +91,15 @@ const distanceMarkers = computed(() => {
   }
   return markers
 })
+
+const odds = computed(() => {
+  if (store.selectedHorses.length === 0) return []
+  return calculateOdds(store.selectedHorses).sort((a, b) => b.percentage - a.percentage)
+})
+
+function getHorseById(id) {
+  return store.selectedHorses.find((h) => h.id === id)
+}
 
 function getPosition(horseId) {
   return positions.value[horseId] ?? 0
@@ -217,7 +251,7 @@ onUnmounted(() => {
   display: flex;
   flex-direction: column;
   justify-content: center;
-  overflow: hidden;
+  overflow-y: auto;
 }
 
 .empty-state {
@@ -345,6 +379,68 @@ onUnmounted(() => {
   letter-spacing: 1px;
   color: currentColor;
   opacity: 0.7;
+}
+
+.odds-panel {
+  margin-top: 20px;
+  border-top: 1px solid #1a1a1a;
+  padding-top: 16px;
+}
+
+.odds-title {
+  font-size: 9px;
+  letter-spacing: 3px;
+  color: #444;
+  margin-bottom: 12px;
+}
+
+.odds-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.odds-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.odds-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.odds-name {
+  font-size: 11px;
+  color: #666;
+  width: 90px;
+  flex-shrink: 0;
+}
+
+.odds-bar-wrap {
+  flex: 1;
+  height: 3px;
+  background: #1a1a1a;
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.odds-bar {
+  height: 100%;
+  border-radius: 2px;
+  opacity: 0.7;
+  transition: width 0.3s ease;
+}
+
+.odds-pct {
+  font-size: 10px;
+  color: #444;
+  font-family: monospace;
+  width: 30px;
+  text-align: right;
 }
 
 .tournament-over {
