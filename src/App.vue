@@ -11,8 +11,7 @@
       </aside>
 
       <section class="panel panel-center">
-        <!-- RaceTrack buraya gelecek -->
-        <!-- RaceControls buraya gelecek -->
+        <RaceControls />
       </section>
 
       <aside class="panel panel-right">
@@ -24,6 +23,7 @@
 
 <script setup>
 import HorseList from './components/HorseList.vue'
+import RaceControls from './components/RaceControls.vue'
 </script>
 
 <style>
