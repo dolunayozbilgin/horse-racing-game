@@ -7,7 +7,7 @@
 
     <main class="app-main">
       <aside class="panel panel-left">
-        <!-- HorseList buraya gelecek -->
+        <HorseList />
       </aside>
 
       <section class="panel panel-center">
@@ -23,7 +23,7 @@
 </template>
 
 <script setup>
-// componentler eklendikçe buraya import edilecek
+import HorseList from './components/HorseList.vue'
 </script>
 
 <style>
