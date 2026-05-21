@@ -5,29 +5,30 @@
     </div>
 
     <div v-else class="track-container">
+      <div class="distance-ruler">
+        <div class="ruler-spacer"></div>
+        <div class="ruler-track">
+          <div
+            v-for="marker in distanceMarkers"
+            :key="marker.label"
+            class="ruler-marker"
+            :style="{ left: marker.position + '%' }"
+          >
+            <span class="ruler-label">{{ marker.label }}</span>
+          </div>
+          <div class="ruler-finish">
+            <span class="ruler-finish-label">FINISH</span>
+          </div>
+        </div>
+      </div>
+
       <div v-for="(horse, index) in store.selectedHorses" :key="horse.id" class="lane">
         <div class="lane-number">{{ index + 1 }}</div>
         <div class="lane-track" :class="{ 'is-injured': injuredHorses.has(horse.id) }">
           <div class="finish-line"></div>
-
-          <div v-if="index === 0" class="distance-markers">
-            <div
-              v-for="marker in distanceMarkers"
-              :key="marker.label"
-              class="marker"
-              :style="{ left: marker.position + '%' }"
-            >
-              <div class="marker-line"></div>
-              <span class="marker-label">{{ marker.label }}</span>
-            </div>
-          </div>
-
           <div
             class="horse-runner"
-            :style="{
-              left: getPosition(horse.id) + '%',
-              color: horse.color,
-            }"
+            :style="{ left: getPosition(horse.id) + '%', color: horse.color }"
           >
             <span class="horse-icon">{{ injuredHorses.has(horse.id) ? '🚑' : '🐴' }}</span>
             <span class="horse-label">{{ horse.name }}</span>
@@ -88,27 +89,41 @@ function startRace() {
   const speeds = {}
   const injuryPoints = {}
   const injuredSet = new Set()
+  const finishTimes = {}
+  const surgeData = {}
+  let tick = 0
 
   performances.forEach((result) => {
-    speeds[result.horse.id] = result.performance
-    if (result.willBeInjured) {
-      // injuryPoint 0-1 arası, pistin %90'ına map ediyoruz
-      injuryPoints[result.horse.id] = result.injuryPoint * 90
+    const horse = result.horse
+    speeds[horse.id] = result.performance
+
+    if (result.willBeInjured && !store.injuryOccurred) {
+      injuryPoints[horse.id] = result.injuryPoint * 90
+      store.injuryOccurred = true
+    }
+
+    const canSurge = horse.condition > 40 && Math.random() < 0.25
+    if (canSurge) {
+      surgeData[horse.id] = {
+        triggerAt: 40 + Math.random() * 35,
+        duration: Math.floor(8 + Math.random() * 7),
+        multiplier: 1.8 + (horse.condition / 100) * 0.6,
+        active: false,
+        ticksLeft: 0,
+      }
     }
   })
 
   const maxPerf = Math.max(...Object.values(speeds))
 
   raceInterval.value = setInterval(() => {
-    let healthyAllFinished = true
+    tick++
 
     store.selectedHorses.forEach((horse) => {
-      // Zaten sakatlanmışsa atla
       if (injuredSet.has(horse.id)) return
 
       const current = positions.value[horse.id] ?? 0
 
-      // Sakatlık noktasına geldi mi?
       if (injuryPoints[horse.id] && current >= injuryPoints[horse.id]) {
         injuredSet.add(horse.id)
         injuredHorses.value = new Set(injuredSet)
@@ -116,13 +131,31 @@ function startRace() {
       }
 
       if (current < 90) {
-        healthyAllFinished = false
-        const speed = (speeds[horse.id] / maxPerf) * 0.8 + Math.random() * 0.15
-        positions.value[horse.id] = Math.min(90, current + speed)
+        let speed = (speeds[horse.id] / maxPerf) * 0.8 + Math.random() * 0.15
+
+        const surge = surgeData[horse.id]
+        if (surge) {
+          if (!surge.active && current >= surge.triggerAt) {
+            surge.active = true
+            surge.ticksLeft = surge.duration
+          }
+          if (surge.active && surge.ticksLeft > 0) {
+            speed *= surge.multiplier
+            surge.ticksLeft--
+          } else if (surge.active && surge.ticksLeft === 0) {
+            surge.active = false
+          }
+        }
+
+        const newPos = Math.min(90, current + speed)
+        positions.value[horse.id] = newPos
+
+        if (newPos >= 90 && !finishTimes[horse.id]) {
+          finishTimes[horse.id] = tick
+        }
       }
     })
 
-    // Sağlıklı atların hepsi bitince yarışı tamamla
     const healthyHorses = store.selectedHorses.filter((h) => !injuredSet.has(h.id))
     const allHealthyDone = healthyHorses.every((h) => (positions.value[h.id] ?? 0) >= 90)
 
@@ -131,9 +164,10 @@ function startRace() {
       raceInterval.value = null
 
       const finishOrder = [...store.selectedHorses].sort((a, b) => {
-        const aPos = injuredSet.has(a.id) ? -1 : (positions.value[a.id] ?? 0)
-        const bPos = injuredSet.has(b.id) ? -1 : (positions.value[b.id] ?? 0)
-        return bPos - aPos
+        if (injuredSet.has(a.id) && injuredSet.has(b.id)) return 0
+        if (injuredSet.has(a.id)) return 1
+        if (injuredSet.has(b.id)) return -1
+        return (finishTimes[a.id] ?? 9999) - (finishTimes[b.id] ?? 9999)
       })
 
       const injuredIds = [...injuredSet]
@@ -205,6 +239,52 @@ onUnmounted(() => {
   gap: 8px;
 }
 
+.distance-ruler {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 4px;
+}
+
+.ruler-spacer {
+  width: 16px;
+  flex-shrink: 0;
+}
+
+.ruler-track {
+  flex: 1;
+  position: relative;
+  height: 20px;
+  border-bottom: 1px solid #222;
+}
+
+.ruler-marker {
+  position: absolute;
+  bottom: 0;
+  transform: translateX(-50%);
+}
+
+.ruler-label {
+  font-size: 9px;
+  color: #333;
+  letter-spacing: 0.5px;
+  font-family: monospace;
+}
+
+.ruler-finish {
+  position: absolute;
+  right: 10%;
+  bottom: 0;
+  transform: translateX(50%);
+}
+
+.ruler-finish-label {
+  font-size: 9px;
+  color: #e74c3c;
+  letter-spacing: 1px;
+  font-family: monospace;
+}
+
 .lane {
   display: flex;
   align-items: center;
@@ -241,40 +321,7 @@ onUnmounted(() => {
   top: 0;
   bottom: 0;
   width: 1px;
-  background: #2a2a2a;
-}
-
-.distance-markers {
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  pointer-events: none;
-}
-
-.marker {
-  position: absolute;
-  top: 0;
-  bottom: 0;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-}
-
-.marker-line {
-  width: 1px;
-  height: 100%;
-  background: #1f1f1f;
-}
-
-.marker-label {
-  position: absolute;
-  bottom: 2px;
-  font-size: 7px;
-  color: #2a2a2a;
-  letter-spacing: 0.5px;
-  white-space: nowrap;
+  background: #e74c3c44;
 }
 
 .horse-runner {

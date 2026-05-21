@@ -19,7 +19,7 @@ const FATIGUE_BY_DISTANCE = {
   2200: 15,
 }
 
-const INJURY_CHANCE = 0.03
+const INJURY_CHANCE = 0.008
 const FORM_CHANCE = 0.15
 const FORM_BOOST = 15
 const RECOVERY_AMOUNT = 3

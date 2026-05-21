@@ -21,7 +21,7 @@
         :disabled="store.raceStatus === 'running'"
         @click="handleGenerate"
       >
-        GENERATE PROGRAM
+        GENERATE TOURNAMENT
       </button>
 
       <button
@@ -82,6 +82,7 @@ function handleStartPause() {
   padding: 16px 24px;
   border-bottom: 1px solid #1a1a1a;
   background: #0a0a0a;
+  flex-shrink: 0;
 }
 
 .race-info {

@@ -28,11 +28,12 @@ const RACE_DISTANCES = [1200, 1400, 1600, 1800, 2000, 2200]
 
 export const useRaceStore = defineStore('race', {
   state: () => ({
-    horses: HORSE_POOL, // tüm 20 at
-    currentRaceIndex: 0, // hangi yarıştayız (0-5)
-    selectedHorses: [], // bu yarış için seçilen 10 at
-    raceResults: [], // tamamlanan yarışların sonuçları [{race, distance, finishOrder}]
-    raceStatus: 'idle', // 'idle' | 'ready' | 'running' | 'finished' | 'tournament_over'
+    horses: HORSE_POOL,
+    currentRaceIndex: 0,
+    selectedHorses: [],
+    raceResults: [],
+    raceStatus: 'idle',
+    injuryOccurred: false,
   }),
 
   getters: {
@@ -61,7 +62,7 @@ export const useRaceStore = defineStore('race', {
         this.raceStatus = 'tournament_over'
       } else {
         this.currentRaceIndex++
-        this.raceStatus = 'idle'
+        this.raceStatus = 'finished'
       }
     },
 
@@ -71,6 +72,7 @@ export const useRaceStore = defineStore('race', {
       this.selectedHorses = []
       this.raceResults = []
       this.raceStatus = 'idle'
+      this.injuryOccurred = false
     },
   },
 })
