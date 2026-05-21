@@ -278,8 +278,42 @@ The measure of good AI usage isn't how much code it writes. It's whether the per
 
 ### 2. When I Took a Different Path Than AI Suggested
 
-_To be filled_
+Several times during this project I pushed back on Claude's suggestions:
+
+**Condition decay (the most important one)**
+Claude initially suggested keeping condition static — simpler to implement. I insisted it should decay after each race and recover when horses rest. This single decision transformed the tournament from 6 independent races into a connected narrative where horse fatigue actually matters.
+
+**Injury timing**
+Claude was calculating injuries before the race started. I changed this: the horse must run first, then collapse mid-track. A horse that never moves and is already marked injured makes no dramatic sense. This was a UX instinct, not a technical one.
+
+**Speed normalization**
+Claude suggested making speed differences much more dramatic (normalized speed formula with 3.5x range between fastest and slowest). I tested it and immediately reverted — it looked artificial, like a cartoon. The subtler original pacing felt more like a real race.
+
+**Noise range**
+Claude suggested ±12.5 for the random noise factor. I kept it at ±10 — "don't break the balance just to have a rounder number" was my reasoning. Small changes to a tuned formula have compounding effects.
+
+**"Don't try to do all of them"**
+Both the spec and Claude warned against adding too many features. I disagreed — not because I wanted to do everything, but because the features I chose (condition decay, stamina types, injury, surge, pre-race odds) were deeply interconnected. Each one made the others more meaningful. That's different from adding unrelated features for the sake of it.
+
+**Tournament winner formula**
+Claude proposed a simple average (total points / races). I pointed out this was still unfair — a horse that races once and wins beats a horse that races five times and always finishes second. We developed a weighted formula together that rewards both consistency and participation.
+
+**Pre-race odds placement**
+Claude suggested showing odds above the track. I moved them below the lanes — the track is the focal point before a race starts, odds are secondary information that shouldn't compete with it visually.
 
 ### 3. Where AI Misled Me & How I Caught It
 
-_To be filled_
+**Finish order was wrong**
+Claude was sorting the finish order by final position value — but since all horses reach 90% at nearly the same time, the sort was essentially random. I noticed the results panel wasn't matching what I saw on the track. The fix was recording the exact tick when each horse crossed the finish line and sorting by that instead.
+
+**Minimum speed guarantee backfired**
+Claude added a `Math.max(0.35)` floor to prevent slow horses from falling too far behind. In practice this equalized all horses — they arrived at the finish line almost simultaneously, which looked worse than the original spread. I caught it immediately on first test and reverted.
+
+**Mass surge was meaningless**
+The first surge implementation applied acceleration to all horses in the final stretch. Claude framed this as "dramatic finish energy." I tested it and realized it was the opposite of dramatic — if everyone speeds up equally, nobody gains ground and nothing changes. The fix was making surge selective: only 25% of horses surge, at random points, so it creates actual positional changes.
+
+**raceMechanics.js was empty**
+At one point Claude gave me the file content but I hadn't saved it properly. The browser threw an import error. Claude didn't catch this — I noticed it when the app crashed and traced it back to the empty file.
+
+**README formatting kept breaking**
+Claude repeatedly generated README sections with code blocks nested inside other code blocks, which GitHub renders incorrectly. I had to point this out multiple times before the formatting stabilized. Claude's awareness of markdown rendering edge cases was unreliable.
