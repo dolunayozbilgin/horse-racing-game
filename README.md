@@ -36,7 +36,7 @@ A tournament-style horse racing simulation built as a single-page web applicatio
 
 ## Race Mechanics
 
-Formula lives in `src/utils/raceMechanics.js`, line 29.
+Formula lives in `src/utils/raceMechanics.js`, line 50.
 
 `performance = condition + staminaBonus + formBonus + noise`
 
@@ -122,7 +122,7 @@ Run: `npm run test:unit`
 
 ### 2. Design Decision I'm Proud Of
 
-`src/utils/raceMechanics.js`, lines 29–88. Extracting all race math into a framework-agnostic JS file. No Vue imports, no store dependencies — pure functions in, pure functions out. This is why 16 unit tests could be written with zero component setup.
+`src/utils/raceMechanics.js`, lines 50–130. Extracting all race math into a framework-agnostic JS file. No Vue imports, no store dependencies — pure functions in, pure functions out. This is why 16 unit tests could be written with zero component setup.
 
 **Decision I'd Revisit:** `src/components/RaceTrack.vue`, `startRace` function ~line 112. It handles position tracking, surge, injury, finish times, condition updates, and result saving in one `setInterval` callback. Should be extracted into a composable (`useRaceAnimation.js`).
 

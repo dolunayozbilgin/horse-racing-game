@@ -78,8 +78,12 @@ const photoFinish = ref(false)
 const photoFinishHorses = ref([])
 const showOddsModal = ref(false)
 
+// if the top finishers are within 5 ticks of each other, it's a photo finish
+// 5 ticks = 250ms at our 50ms interval — close enough to feel dramatic
 const PHOTO_FINISH_THRESHOLD = 5
 
+// ruler markers are calculated from the race distance so they always
+// line up correctly regardless of which of the 6 distances we're running
 const distanceMarkers = computed(() => {
   const distance = store.currentDistance
   const markers = []
@@ -96,6 +100,7 @@ function getPosition(horseId) {
   return positions.value[horseId] ?? 0
 }
 
+// reset everything when a new race is about to start
 function initPositions() {
   const pos = {}
   store.selectedHorses.forEach((h) => {
@@ -112,6 +117,8 @@ function initPositions() {
 function startRace() {
   if (raceInterval.value) clearInterval(raceInterval.value)
 
+  // get performance scores from the math layer — this is where condition,
+  // stamina type, form, and noise all get combined into a single number per horse
   const performances = calculateRacePerformances(store.selectedHorses, store.currentDistance)
 
   const speeds = {}
@@ -125,17 +132,21 @@ function startRace() {
     const horse = result.horse
     speeds[horse.id] = result.performance
 
+    // max 1 injury per tournament — more than that starts to feel unfair
     if (result.willBeInjured && !store.injuryOccurred) {
       injuryPoints[horse.id] = result.injuryPoint * 90
       store.injuryOccurred = true
     }
 
-    // Condition bazlı surge şansı
+    // better conditioned horses are more likely to surge — makes sense physically
+    // a tired horse at 60 condition just doesn't have the reserves for a burst
     const surgeChance = (horse.condition / 100) * 0.4
     const canSurge = Math.random() < surgeChance
 
     if (canSurge) {
       surgeData[horse.id] = {
+        // surge triggers somewhere between 40–75% of the track
+        // early enough to change the race, late enough to feel like a final push
         triggerAt: 40 + Math.random() * 35,
         duration: Math.floor(8 + Math.random() * 7),
         multiplier: 1.8 + (horse.condition / 100) * 0.6,
@@ -150,7 +161,8 @@ function startRace() {
   raceInterval.value = setInterval(() => {
     tick++
 
-    // Skip kontrolü
+    // skip button — teleport all healthy horses to the finish line
+    // injured horses stay where they are
     if (store.skipRace) {
       store.skipRace = false
       store.selectedHorses.forEach((horse) => {
@@ -168,6 +180,7 @@ function startRace() {
 
       const current = positions.value[horse.id] ?? 0
 
+      // injury kicks in when the horse reaches its predetermined point on the track
       if (injuryPoints[horse.id] && current >= injuryPoints[horse.id]) {
         injuredSet.add(horse.id)
         injuredHorses.value = new Set(injuredSet)
@@ -178,11 +191,13 @@ function startRace() {
         const normalizedSpeed = speeds[horse.id] / maxPerf
         let speed
 
+        // two-phase speed system:
+        // first 60% — horses spread out so you can see who's leading
+        // last 40% — gap closes, anyone can still win
+        // this replicates what actually happens in real races
         if (current < 60) {
-          // İlk bölüm — biraz ayrışsın, kim önde kim arkada belli olsun
           speed = 0.45 + normalizedSpeed * 0.4 + Math.random() * 0.08
         } else {
-          // Son bölüm — band daralır, kapanır ama eşit olmaz
           speed = 0.58 + normalizedSpeed * 0.2 + Math.random() * 0.1
         }
 
@@ -203,6 +218,8 @@ function startRace() {
         const newPos = Math.min(90, current + speed)
         positions.value[horse.id] = newPos
 
+        // record the exact tick when each horse crosses — this is how we
+        // determine finish order accurately instead of comparing final positions
         if (newPos >= 90 && !finishTimes[horse.id]) {
           finishTimes[horse.id] = tick
         }
@@ -216,6 +233,8 @@ function startRace() {
       clearInterval(raceInterval.value)
       raceInterval.value = null
 
+      // sort by finish tick, not position — positions all end at 90
+      // injured horses always go to the back
       const finishOrder = [...store.selectedHorses].sort((a, b) => {
         if (injuredSet.has(a.id) && injuredSet.has(b.id)) return 0
         if (injuredSet.has(a.id)) return 1
@@ -223,6 +242,7 @@ function startRace() {
         return (finishTimes[a.id] ?? 9999) - (finishTimes[b.id] ?? 9999)
       })
 
+      // check if top 3 finished within the photo finish threshold
       const top3 = finishOrder.filter((h) => !injuredSet.has(h.id)).slice(0, 3)
       const times = top3.map((h) => finishTimes[h.id] ?? 9999)
       const maxDiff = Math.max(...times) - Math.min(...times)
@@ -257,6 +277,7 @@ function stopRace() {
   }
 }
 
+// watch raceStatus instead of using emits — the store is the source of truth
 watch(
   () => store.raceStatus,
   (status) => {
@@ -377,13 +398,13 @@ onUnmounted(() => {
 }
 
 .lane-track.is-injured {
-  opacity: 0.4;
+  opacity: 0.4; /* faded but still visible — horse is down, not gone */
   border-color: #e74c3c22;
 }
 
 .finish-line {
   position: absolute;
-  right: 10%;
+  right: 10%; /* matches the 90% position cap in startRace — horses stop here */
   top: 0;
   bottom: 0;
   width: 1px;
@@ -397,7 +418,7 @@ onUnmounted(() => {
   display: flex;
   align-items: center;
   gap: 4px;
-  transition: left 0.05s linear;
+  transition: left 0.05s linear; /* matches the 50ms setInterval — smooth but not laggy */
   white-space: nowrap;
 }
 
