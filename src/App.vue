@@ -19,16 +19,50 @@
         <ResultsPanel />
       </aside>
     </main>
+
+    <TournamentWinner
+      v-if="store.raceStatus === 'tournament_over' && tournamentWinner"
+      :winner="tournamentWinner"
+      @reset="store.resetTournament()"
+    />
   </div>
 </template>
 
 <script setup>
+import { computed } from 'vue'
+import { useRaceStore } from './stores/raceStore'
 import HorseList from './components/HorseList.vue'
 import RaceControls from './components/RaceControls.vue'
 import RaceTrack from './components/RaceTrack.vue'
 import ResultsPanel from './components/ResultsPanel.vue'
-</script>
+import TournamentWinner from './components/TournamentWinner.vue'
 
+const store = useRaceStore()
+
+const tournamentWinner = computed(() => {
+  if (store.raceResults.length === 0) return null
+  const totalRaces = store.raceResults.length
+  const stats = {}
+
+  store.raceResults.forEach((result) => {
+    result.finishOrder.forEach((horse, index) => {
+      if (!stats[horse.id]) stats[horse.id] = { horse, totalPoints: 0, raceCount: 0 }
+      stats[horse.id].totalPoints += 10 - index
+      stats[horse.id].raceCount++
+    })
+  })
+
+  const scored = Object.values(stats).map((entry) => {
+    const maxPossible = entry.raceCount * 10
+    const ratio = entry.totalPoints / maxPossible
+    const participationBonus = 1 + (entry.raceCount / totalRaces) * 0.2
+    const finalScore = ratio * 100 * participationBonus
+    return { ...entry, finalScore }
+  })
+
+  return scored.sort((a, b) => b.finalScore - a.finalScore)[0]?.horse ?? null
+})
+</script>
 <style>
 * {
   margin: 0;
