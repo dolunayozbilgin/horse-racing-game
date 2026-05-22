@@ -126,7 +126,7 @@ Run: `npm run test:unit`
 
 `src/utils/raceMechanics.js`, lines 50–130. Extracting all race math into a framework-agnostic JS file. No Vue imports, no store dependencies — pure functions in, pure functions out. This is why 16 unit tests could be written with zero component setup.
 
-**Decision I'd Revisit:** `src/components/RaceTrack.vue`, `startRace` function ~line 112. It handles position tracking, surge, injury, finish times, condition updates, and result saving in one `setInterval` callback. Should be extracted into a composable (`useRaceAnimation.js`).
+**Decision I'd Revisit:** `src/components/RaceTrack.vue`, `startRace` function ~line 117. It handles position tracking, surge, injury, finish times, condition updates, and result saving in one `setInterval` callback. Should be extracted into a composable (`useRaceAnimation.js`).
 
 ### 3. What Would Break at 10x Scale
 
