@@ -120,7 +120,7 @@ Run: `npm run test:unit`
 
 ### 1. Race Mechanics Formula
 
-`src/utils/raceMechanics.js`, line 29. The design priority was realism. Having watched racing in Hong Kong and Turkey, the key truth is: the favorite doesn't always win. Upsets happen in the final stretch. Every formula decision — surge, noise, form variance — exists to make that possible while keeping condition meaningful.
+`src/utils/raceMechanics.js`, line 50. The design priority was realism. Having watched racing in Hong Kong and Turkey, the key truth is: the favorite doesn't always win. Upsets happen in the final stretch. Every formula decision — surge, noise, form variance — exists to make that possible while keeping condition meaningful.
 
 ### 2. Design Decision I'm Proud Of
 
@@ -130,7 +130,7 @@ Run: `npm run test:unit`
 
 ### 3. What Would Break at 10x Scale
 
-`src/components/RaceTrack.vue`, `startRace` ~line 112. The `setInterval` loop iterates all horses synchronously every 50ms. At 200 horses, frame drops would be visible. Worse: all race state lives as local closure variables — no external system can read or write it. Multiplayer is impossible with this architecture. Fix: move tick state to Pinia, switch to `requestAnimationFrame`.
+`src/components/RaceTrack.vue`, `startRace` function ~line 117. The `setInterval` loop iterates all horses synchronously every 50ms. At 200 horses, frame drops would be visible. Worse: all race state lives as local closure variables — no external system can read or write it. Multiplayer is impossible with this architecture. Fix: move tick state to Pinia, switch to `requestAnimationFrame`.
 
 ### 4. First Thing to Tell a New Teammate
 
