@@ -28,30 +28,30 @@ describe('calculateRacePerformances', () => {
   })
 
   it('injured horse gets 0 performance', () => {
-    // Çok sayıda deneme ile en az bir injured sonuç üretelim
-    let foundInjured = false
+    // 500 denemede sakatlanmış at bulmaya çalış
+    const allResults = []
     for (let i = 0; i < 500; i++) {
       const results = calculateRacePerformances(mockHorses, 1200)
-      const injured = results.find((r) => r.injured)
-      if (injured) {
-        expect(injured.performance).toBe(0)
-        foundInjured = true
-        break
-      }
+      allResults.push(...results)
     }
-    // 500 denemede bulunmazsa test geçer — injury çok nadir olabilir
+    const injuredResults = allResults.filter((r) => r.injured)
+    injuredResults.forEach((r) => {
+      expect(r.performance).toBe(0)
+    })
+    // 500 denemede hiç sakatlık olmazsa test geçer — injury çok nadir
     expect(true).toBe(true)
   })
 
   it('performance is never negative for healthy horses', () => {
+    const allResults = []
     for (let i = 0; i < 50; i++) {
       const results = calculateRacePerformances(mockHorses, 1200)
-      results.forEach((r) => {
-        if (!r.injured) {
-          expect(r.performance).toBeGreaterThanOrEqual(0)
-        }
-      })
+      allResults.push(...results)
     }
+    const healthyResults = allResults.filter((r) => !r.injured)
+    healthyResults.forEach((r) => {
+      expect(r.performance).toBeGreaterThanOrEqual(0)
+    })
   })
 
   it('each result has required fields', () => {

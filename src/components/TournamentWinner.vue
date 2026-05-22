@@ -15,7 +15,7 @@
 <script setup>
 import { ref, onMounted, onUnmounted } from 'vue'
 
-const props = defineProps(['winner'])
+defineProps(['winner'])
 defineEmits(['reset'])
 
 const confettiCanvas = ref(null)
