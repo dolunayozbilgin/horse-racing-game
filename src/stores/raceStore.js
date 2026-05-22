@@ -23,7 +23,6 @@ const HORSE_POOL = [
   { id: 20, name: 'Baba', color: '#636e72', condition: 70, staminaType: 'middle' },
 ]
 
-// Yarış mesafeleri sırayla - spec'te tanımlı, değiştirilemez
 const RACE_DISTANCES = [1200, 1400, 1600, 1800, 2000, 2200]
 
 export const useRaceStore = defineStore('race', {
@@ -34,6 +33,7 @@ export const useRaceStore = defineStore('race', {
     raceResults: [],
     raceStatus: 'idle',
     injuryOccurred: false,
+    skipRace: false,
   }),
 
   getters: {
@@ -53,14 +53,12 @@ export const useRaceStore = defineStore('race', {
   },
 
   actions: {
-    // 20 attan rastgele 10 at seç
     generateProgram() {
       const shuffled = [...this.horses].sort(() => Math.random() - 0.5)
       this.selectedHorses = shuffled.slice(0, 10)
       this.raceStatus = 'ready'
     },
 
-    // Yarış sonucunu kaydet, sıradaki yarışa geç
     saveRaceResult(finishOrder) {
       this.raceResults.push({
         race: this.currentRaceIndex + 1,
@@ -76,13 +74,13 @@ export const useRaceStore = defineStore('race', {
       }
     },
 
-    // Tournamentı sıfırla
     resetTournament() {
       this.currentRaceIndex = 0
       this.selectedHorses = []
       this.raceResults = []
       this.raceStatus = 'idle'
       this.injuryOccurred = false
+      this.skipRace = false
     },
   },
 })

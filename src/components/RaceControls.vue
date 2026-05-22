@@ -26,10 +26,18 @@
 
       <button
         class="btn btn-primary"
-        :disabled="store.raceStatus === 'idle' || store.raceStatus === 'tournament_over'"
+        :disabled="
+          store.raceStatus === 'idle' ||
+          store.raceStatus === 'running' ||
+          store.raceStatus === 'tournament_over'
+        "
         @click="handleStartPause"
       >
         {{ startPauseLabel }}
+      </button>
+
+      <button v-if="store.raceStatus === 'running'" class="btn btn-skip" @click="handleSkip">
+        SKIP
       </button>
     </div>
   </div>
@@ -53,7 +61,6 @@ const statusLabel = computed(() => {
 })
 
 const startPauseLabel = computed(() => {
-  if (store.raceStatus === 'running') return 'PAUSE'
   if (store.raceStatus === 'finished') return 'NEXT RACE'
   return 'START'
 })
@@ -66,11 +73,13 @@ function handleGenerate() {
 function handleStartPause() {
   if (store.raceStatus === 'ready') {
     store.raceStatus = 'running'
-  } else if (store.raceStatus === 'running') {
-    store.raceStatus = 'ready'
   } else if (store.raceStatus === 'finished') {
     store.generateProgram()
   }
+}
+
+function handleSkip() {
+  store.skipRace = true
 }
 </script>
 
@@ -139,7 +148,7 @@ function handleStartPause() {
   border: none;
   border-radius: 2px;
   cursor: pointer;
-  transition: opacity 0.2s;
+  transition: all 0.2s;
 }
 
 .btn:disabled {
@@ -165,5 +174,16 @@ function handleStartPause() {
 
 .btn-primary:not(:disabled):hover {
   opacity: 0.85;
+}
+
+.btn-skip {
+  background: transparent;
+  color: #444;
+  border: 1px solid #2a2a2a;
+}
+
+.btn-skip:hover {
+  border-color: #555;
+  color: #fff;
 }
 </style>

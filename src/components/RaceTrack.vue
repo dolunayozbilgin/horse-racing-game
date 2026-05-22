@@ -147,6 +147,19 @@ function startRace() {
   raceInterval.value = setInterval(() => {
     tick++
 
+    // Skip kontrolü
+    if (store.skipRace) {
+      store.skipRace = false
+      store.selectedHorses.forEach((horse) => {
+        if (!injuredSet.has(horse.id)) {
+          if (!finishTimes[horse.id]) {
+            finishTimes[horse.id] = tick
+          }
+          positions.value[horse.id] = 90
+        }
+      })
+    }
+
     store.selectedHorses.forEach((horse) => {
       if (injuredSet.has(horse.id)) return
 
@@ -198,7 +211,7 @@ function startRace() {
         return (finishTimes[a.id] ?? 9999) - (finishTimes[b.id] ?? 9999)
       })
 
-      const top2 = finishOrder.filter((h) => !injuredSet.has(h.id)).slice(0, 2)
+      const top2 = finishOrder.filter((h) => !injuredSet.has(h.id)).slice(0, 3)
       const times = top2.map((h) => finishTimes[h.id] ?? 9999)
       const maxDiff = Math.max(...times) - Math.min(...times)
 
