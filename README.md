@@ -2,6 +2,8 @@
 
 A tournament-style horse racing simulation built as a single-page web application.
 
+**Live Demo:** https://horse-racing-game-five.vercel.app
+
 **Tech Stack:** Vue 3, Pinia, CSS animations
 
 ---
