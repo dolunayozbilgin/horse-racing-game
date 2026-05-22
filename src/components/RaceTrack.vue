@@ -36,23 +36,21 @@
         </div>
       </div>
 
-      <!-- Pre-race odds — sadece ready durumunda göster -->
-      <div v-if="store.raceStatus === 'ready'" class="odds-panel">
-        <div class="odds-title">PRE-RACE ODDS</div>
-        <div class="odds-list">
-          <div v-for="odd in odds" :key="odd.horseId" class="odds-row">
-            <div class="odds-dot" :style="{ background: getHorseById(odd.horseId)?.color }"></div>
-            <span class="odds-name">{{ getHorseById(odd.horseId)?.name }}</span>
-            <div class="odds-bar-wrap">
-              <div
-                class="odds-bar"
-                :style="{
-                  width: odd.percentage + '%',
-                  background: getHorseById(odd.horseId)?.color,
-                }"
-              ></div>
-            </div>
-            <span class="odds-pct">{{ odd.percentage }}%</span>
+      <div v-if="store.raceStatus === 'ready'" class="odds-btn-wrap">
+        <button class="odds-btn" @click="showOddsModal = true">VIEW ODDS & BETTING</button>
+      </div>
+    </div>
+
+    <OddsModal v-if="showOddsModal" @close="showOddsModal = false" />
+
+    <div v-if="photoFinish" class="photo-finish-overlay">
+      <div class="photo-finish-content">
+        <span class="photo-finish-title">PHOTO FINISH</span>
+        <div class="photo-finish-horses">
+          <div v-for="(horse, index) in photoFinishHorses" :key="horse.id" class="photo-finish-row">
+            <span class="photo-finish-pos">{{ index + 1 }}</span>
+            <div class="photo-finish-dot" :style="{ background: horse.color }"></div>
+            <span class="photo-finish-name" :style="{ color: horse.color }">{{ horse.name }}</span>
           </div>
         </div>
       </div>
@@ -67,11 +65,8 @@
 <script setup>
 import { ref, watch, onUnmounted, computed } from 'vue'
 import { useRaceStore } from '../stores/raceStore'
-import {
-  calculateRacePerformances,
-  updateConditionsAfterRace,
-  calculateOdds,
-} from '../utils/raceMechanics'
+import { calculateRacePerformances, updateConditionsAfterRace } from '../utils/raceMechanics'
+import OddsModal from './OddsModal.vue'
 
 const store = useRaceStore()
 
@@ -79,6 +74,11 @@ const positions = ref({})
 const raceInterval = ref(null)
 const raceFinished = ref(false)
 const injuredHorses = ref(new Set())
+const photoFinish = ref(false)
+const photoFinishHorses = ref([])
+const showOddsModal = ref(false)
+
+const PHOTO_FINISH_THRESHOLD = 5
 
 const distanceMarkers = computed(() => {
   const distance = store.currentDistance
@@ -92,15 +92,6 @@ const distanceMarkers = computed(() => {
   return markers
 })
 
-const odds = computed(() => {
-  if (store.selectedHorses.length === 0) return []
-  return calculateOdds(store.selectedHorses).sort((a, b) => b.percentage - a.percentage)
-})
-
-function getHorseById(id) {
-  return store.selectedHorses.find((h) => h.id === id)
-}
-
 function getPosition(horseId) {
   return positions.value[horseId] ?? 0
 }
@@ -113,6 +104,9 @@ function initPositions() {
   positions.value = pos
   raceFinished.value = false
   injuredHorses.value = new Set()
+  photoFinish.value = false
+  photoFinishHorses.value = []
+  showOddsModal.value = false
 }
 
 function startRace() {
@@ -204,6 +198,18 @@ function startRace() {
         return (finishTimes[a.id] ?? 9999) - (finishTimes[b.id] ?? 9999)
       })
 
+      const top2 = finishOrder.filter((h) => !injuredSet.has(h.id)).slice(0, 2)
+      const times = top2.map((h) => finishTimes[h.id] ?? 9999)
+      const maxDiff = Math.max(...times) - Math.min(...times)
+
+      if (maxDiff <= PHOTO_FINISH_THRESHOLD && top2.length >= 2) {
+        photoFinish.value = true
+        photoFinishHorses.value = top2
+        setTimeout(() => {
+          photoFinish.value = false
+        }, 3000)
+      }
+
       const injuredIds = [...injuredSet]
 
       store.horses = updateConditionsAfterRace(
@@ -252,6 +258,7 @@ onUnmounted(() => {
   flex-direction: column;
   justify-content: center;
   overflow-y: auto;
+  position: relative;
 }
 
 .empty-state {
@@ -381,66 +388,88 @@ onUnmounted(() => {
   opacity: 0.7;
 }
 
-.odds-panel {
+.odds-btn-wrap {
   margin-top: 20px;
   border-top: 1px solid #1a1a1a;
   padding-top: 16px;
+  text-align: center;
 }
 
-.odds-title {
-  font-size: 9px;
-  letter-spacing: 3px;
-  color: #444;
-  margin-bottom: 12px;
+.odds-btn {
+  padding: 10px 24px;
+  background: transparent;
+  border: 1px solid #2a2a2a;
+  color: #555;
+  font-size: 10px;
+  letter-spacing: 2px;
+  cursor: pointer;
+  border-radius: 2px;
+  transition: all 0.2s;
 }
 
-.odds-list {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
+.odds-btn:hover {
+  border-color: #555;
+  color: #fff;
 }
 
-.odds-row {
+.photo-finish-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.85);
   display: flex;
   align-items: center;
-  gap: 8px;
+  justify-content: center;
+  z-index: 10;
+  animation: fadeIn 0.3s ease;
 }
 
-.odds-dot {
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  flex-shrink: 0;
+.photo-finish-content {
+  text-align: center;
 }
 
-.odds-name {
-  font-size: 11px;
-  color: #666;
-  width: 90px;
-  flex-shrink: 0;
+.photo-finish-title {
+  display: block;
+  font-size: 28px;
+  font-weight: 700;
+  letter-spacing: 8px;
+  color: #f39c12;
+  margin-bottom: 24px;
+  animation: pulse 0.5s ease infinite alternate;
 }
 
-.odds-bar-wrap {
-  flex: 1;
-  height: 3px;
-  background: #1a1a1a;
-  border-radius: 2px;
-  overflow: hidden;
+.photo-finish-horses {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  align-items: center;
 }
 
-.odds-bar {
-  height: 100%;
-  border-radius: 2px;
-  opacity: 0.7;
-  transition: width 0.3s ease;
+.photo-finish-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
 }
 
-.odds-pct {
-  font-size: 10px;
-  color: #444;
+.photo-finish-pos {
+  font-size: 14px;
+  color: #555;
   font-family: monospace;
-  width: 30px;
-  text-align: right;
+  width: 16px;
+}
+
+.photo-finish-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+}
+
+.photo-finish-name {
+  font-size: 16px;
+  font-weight: 600;
+  letter-spacing: 2px;
 }
 
 .tournament-over {
@@ -454,5 +483,23 @@ onUnmounted(() => {
   font-size: 13px;
   letter-spacing: 4px;
   color: #e74c3c;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes pulse {
+  from {
+    opacity: 0.7;
+  }
+  to {
+    opacity: 1;
+  }
 }
 </style>

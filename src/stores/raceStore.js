@@ -40,6 +40,16 @@ export const useRaceStore = defineStore('race', {
     currentDistance: (state) => RACE_DISTANCES[state.currentRaceIndex],
     totalRaces: () => RACE_DISTANCES.length,
     isLastRace: (state) => state.currentRaceIndex === RACE_DISTANCES.length - 1,
+    winCounts: (state) => {
+      const counts = {}
+      state.raceResults.forEach((result) => {
+        const winner = result.finishOrder[0]
+        if (winner) {
+          counts[winner.id] = (counts[winner.id] ?? 0) + 1
+        }
+      })
+      return counts
+    },
   },
 
   actions: {
