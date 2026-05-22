@@ -172,7 +172,6 @@ Not any single formula — the compounding nature of progress. Every feature rev
 
 **With another week:**
 
-- Condition-based surge probability (already designed, not implemented) — higher condition horses more likely to surge
 - Virtual betting system — wallet, place actual bets, see winnings accumulate across the tournament
 - Replay mode — rewatch any race from the tournament
 - Post-tournament stats — win rates, average finish position, condition history per horse
