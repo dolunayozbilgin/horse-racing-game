@@ -83,11 +83,22 @@ export function updateConditionsAfterRace(allHorses, raceHorses, distance, injur
   })
 }
 
-export function calculateOdds(horses, distance, winCounts = {}) {
+function getFormBonus(horse, raceResults) {
+  if (raceResults.length === 0) return 0
+  const lastRace = raceResults[raceResults.length - 1]
+  const position = lastRace.finishOrder.findIndex((h) => h.id === horse.id)
+  if (position === -1) return 0
+  if (position <= 2) return -8
+  if (position >= 7) return 8
+  return 0
+}
+
+export function calculateOdds(horses, distance, winCounts = {}, raceResults = []) {
   const adjusted = horses.map((horse) => {
     const staminaBonus = STAMINA_BONUS[horse.staminaType][distance] ?? 0
     const winPenalty = (winCounts[horse.id] ?? 0) * 5
-    const score = Math.max(1, horse.condition * 0.6 + staminaBonus * 0.8 - winPenalty)
+    const formBonus = getFormBonus(horse, raceResults)
+    const score = Math.max(1, horse.condition * 0.6 + staminaBonus * 0.8 - winPenalty + formBonus)
     return { horse, score }
   })
 
@@ -101,9 +112,10 @@ export function calculateOdds(horses, distance, winCounts = {}) {
   })
 }
 
-// Bahis tipleri için oran hesabı
-export function calculateBettingOdds(horses, distance, winCounts = {}) {
-  const baseOdds = calculateOdds(horses, distance, winCounts).sort((a, b) => a.odds - b.odds)
+export function calculateBettingOdds(horses, distance, winCounts = {}, raceResults = []) {
+  const baseOdds = calculateOdds(horses, distance, winCounts, raceResults).sort(
+    (a, b) => a.odds - b.odds,
+  )
 
   const sorted = baseOdds.map((o) => ({
     horse: horses.find((h) => h.id === o.horseId),
@@ -116,30 +128,30 @@ export function calculateBettingOdds(horses, distance, winCounts = {}) {
     placeOdds: Math.round((item.winOdds / 3) * 10) / 10,
   }))
 
-  // Exacta — tüm kombinasyonlar, en düşük oddstan sırala, ilk 5
+  // Exacta — sıra pozisyon çarpanı + noise
   const exactaCombos = []
   for (let i = 0; i < sorted.length; i++) {
     for (let j = 0; j < sorted.length; j++) {
       if (i === j) continue
-      const odds = Math.round(sorted[i].winOdds * sorted[j].winOdds * 0.6 * 10) / 10
-      exactaCombos.push({
-        horses: [sorted[i].horse, sorted[j].horse],
-        odds,
-      })
+      const baseOdds = sorted[i].winOdds * sorted[j].winOdds * 1.15 * 0.6
+      const noise = 0.9 + Math.random() * 0.2
+      const odds = Math.round(baseOdds * noise * 10) / 10
+      exactaCombos.push({ horses: [sorted[i].horse, sorted[j].horse], odds })
     }
   }
   exactaCombos.sort((a, b) => a.odds - b.odds)
-  const topExacta = exactaCombos.slice(0, 5)
 
-  // Trifecta — tüm kombinasyonlar, en düşük oddstan sırala, ilk 5
+  // Trifecta — sıra pozisyon çarpanı + noise
   const trifectaCombos = []
   for (let i = 0; i < sorted.length; i++) {
     for (let j = 0; j < sorted.length; j++) {
       if (i === j) continue
       for (let k = 0; k < sorted.length; k++) {
         if (k === i || k === j) continue
-        const odds =
-          Math.round(sorted[i].winOdds * sorted[j].winOdds * sorted[k].winOdds * 0.4 * 10) / 10
+        const baseOdds =
+          sorted[i].winOdds * sorted[j].winOdds * 1.15 * sorted[k].winOdds * 1.3 * 0.4
+        const noise = 0.9 + Math.random() * 0.2
+        const odds = Math.round(baseOdds * noise * 10) / 10
         trifectaCombos.push({
           horses: [sorted[i].horse, sorted[j].horse, sorted[k].horse],
           odds,
@@ -148,11 +160,10 @@ export function calculateBettingOdds(horses, distance, winCounts = {}) {
     }
   }
   trifectaCombos.sort((a, b) => a.odds - b.odds)
-  const topTrifecta = trifectaCombos.slice(0, 5)
 
   return {
     win: withPlace,
-    exacta: topExacta,
-    trifecta: topTrifecta,
+    exacta: exactaCombos.slice(0, 5),
+    trifecta: trifectaCombos.slice(0, 5),
   }
 }

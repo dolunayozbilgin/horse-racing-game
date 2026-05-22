@@ -60,7 +60,15 @@ const tournamentWinner = computed(() => {
     return { ...entry, finalScore }
   })
 
-  return scored.sort((a, b) => b.finalScore - a.finalScore)[0]?.horse ?? null
+  return (
+    scored.sort((a, b) => {
+      if (b.finalScore !== a.finalScore) return b.finalScore - a.finalScore
+      const aWins = store.winCounts[a.horse.id] ?? 0
+      const bWins = store.winCounts[b.horse.id] ?? 0
+      if (bWins !== aWins) return bWins - aWins
+      return b.horse.condition - a.horse.condition
+    })[0]?.horse ?? null
+  )
 })
 </script>
 <style>
