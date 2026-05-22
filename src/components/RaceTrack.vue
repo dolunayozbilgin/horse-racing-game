@@ -130,7 +130,10 @@ function startRace() {
       store.injuryOccurred = true
     }
 
-    const canSurge = horse.condition > 40 && Math.random() < 0.25
+    // Condition bazlı surge şansı
+    const surgeChance = (horse.condition / 100) * 0.4
+    const canSurge = Math.random() < surgeChance
+
     if (canSurge) {
       surgeData[horse.id] = {
         triggerAt: 40 + Math.random() * 35,
@@ -172,7 +175,16 @@ function startRace() {
       }
 
       if (current < 90) {
-        let speed = (speeds[horse.id] / maxPerf) * 0.8 + Math.random() * 0.15
+        const normalizedSpeed = speeds[horse.id] / maxPerf
+        let speed
+
+        if (current < 60) {
+          // İlk bölüm — biraz ayrışsın, kim önde kim arkada belli olsun
+          speed = 0.45 + normalizedSpeed * 0.4 + Math.random() * 0.08
+        } else {
+          // Son bölüm — band daralır, kapanır ama eşit olmaz
+          speed = 0.58 + normalizedSpeed * 0.2 + Math.random() * 0.1
+        }
 
         const surge = surgeData[horse.id]
         if (surge) {
@@ -211,13 +223,13 @@ function startRace() {
         return (finishTimes[a.id] ?? 9999) - (finishTimes[b.id] ?? 9999)
       })
 
-      const top2 = finishOrder.filter((h) => !injuredSet.has(h.id)).slice(0, 3)
-      const times = top2.map((h) => finishTimes[h.id] ?? 9999)
+      const top3 = finishOrder.filter((h) => !injuredSet.has(h.id)).slice(0, 3)
+      const times = top3.map((h) => finishTimes[h.id] ?? 9999)
       const maxDiff = Math.max(...times) - Math.min(...times)
 
-      if (maxDiff <= PHOTO_FINISH_THRESHOLD && top2.length >= 2) {
+      if (maxDiff <= PHOTO_FINISH_THRESHOLD && top3.length >= 2) {
         photoFinish.value = true
-        photoFinishHorses.value = top2
+        photoFinishHorses.value = top3
         setTimeout(() => {
           photoFinish.value = false
         }, 3000)
