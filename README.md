@@ -110,38 +110,39 @@ Each horse has a **3% chance of injury** per race. An injured horse scores 0 per
 
 Calculated in `calculateOdds()` — each horse's condition as a percentage of the total pool condition. Visual only, does not affect mechanics.
 
-### Formula
-
-_How does condition affect outcome? What randomness is added? What makes upsets possible?_
-
-### Distance & Stamina
-
-_How do longer races (1200m → 2200m) affect performance?_
-
----
-
 ## Animation Approach
-
-_To be filled after `RaceTrack.vue` is built._
 
 ### Chosen Method
 
-_CSS transitions / requestAnimationFrame / canvas — which and why_
+CSS transitions driven by a `setInterval` loop (50ms tick rate). Each tick calculates new positions for all horses and updates their `left` CSS property. The browser's CSS engine handles the smooth interpolation between position updates via `transition: left 0.05s linear` on each horse element.
 
 ### Trade-offs
 
-_What did this approach gain and sacrifice?_
+**Why CSS transitions over canvas/WebGL:**
+Canvas and WebGL would give more control over rendering but add significant complexity for what is essentially a horizontal position update. CSS transitions handle easing automatically and integrate naturally with Vue's reactivity system — no manual render loop or draw calls needed.
+
+**Why setInterval over requestAnimationFrame:**
+`setInterval` at 50ms (20fps) was sufficient for this use case and simpler to reason about. The trade-off is that `setInterval` runs regardless of tab visibility and doesn't sync with the display refresh rate. `requestAnimationFrame` would be the production-grade replacement — it pauses when the tab is hidden and syncs with the browser's 60fps rendering cycle. At 10 horses this difference is invisible; at 200 horses it would matter significantly.
 
 ---
 
 ## Bonus Track
 
-_To be filled after bonus feature is implemented._
-
-**Chosen track:** _Meaningful unit tests for store logic and race mechanics_
+**Chosen track:** Meaningful unit tests for store logic and race mechanics
 
 **Why this track:**
-_Short explanation here_
+The race mechanics formula is the heart of the game — condition decay, stamina bonuses, injury probability, form variance. If any of these are miscalculated, the entire simulation breaks silently: horses finish in wrong order, conditions never decay, injuries never trigger.
+
+Extracting all race math into `src/utils/raceMechanics.js` was a deliberate architectural decision made specifically to enable this. Pure JavaScript functions with no Vue dependencies can be tested without mounting components, mocking the store, or setting up the full application. The tests run in milliseconds.
+
+16 tests cover:
+- `calculateRacePerformances` — correct result count, sorted by performance, injured horse gets 0, no negative performance, sprint bonus at 1200m
+- `updateConditionsAfterRace` — raced horses lose condition, non-racing horses recover, injured horses lose more, condition never below 1 or above 100, longer distance causes more fatigue
+- `calculateOdds` — correct entry count, percentages sum to ~100, higher condition = higher odds
+
+Run with: `npm run test:unit`
+
+The separation of concerns that makes these tests possible is the same reason a new developer can understand the codebase quickly — the math layer is isolated, readable, and verifiable independently of the UI.
 
 ---
 
