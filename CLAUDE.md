@@ -12,7 +12,6 @@ A tournament-style horse racing simulation built with Vue 3 + Pinia.
 - **All game state lives in `src/stores/raceStore.js`** — never scatter state across components
 - **All race math lives in `src/utils/raceMechanics.js`** — components never calculate outcomes
 - **Components are display-only** — they read from store, dispatch actions, render UI
-- Counter.js is unused scaffolding — ignore it
 
 ## Core Spec (Locked — Never Change)
 
@@ -34,7 +33,7 @@ performance = condition + staminaBonus + formBonus + noise
 - **formBonus**: 15% good day (+15), 15% bad day (-15), 70% neutral
 - **noise**: ±10 random
 - **injury**: 0.8% chance per race, max 1 per tournament, occurs mid-race
-- **surge**: 25% chance per horse, triggers between 40-75% of track, condition > 40
+- **surge**: condition-based chance (condition/100 × 40%), triggers between 40-75% of track
 
 After each race:
 
@@ -53,6 +52,7 @@ These decisions were made deliberately by the developer — do not change withou
 - **Condition decay is a feature** — horses tire across the tournament. Do not remove or simplify this
 - **Max 1 injury per tournament** — injury is dramatic, not routine. Keep it rare
 - **No router** — this is intentionally a single-page app, do not add Vue Router
+- **Conditions randomized per tournament** — 60–100 range, so no horse is always the favorite
 
 ## Code Style
 
@@ -65,11 +65,13 @@ These decisions were made deliberately by the developer — do not change withou
 ## File Map
 
 - src/stores/raceStore.js — game state, tournament flow
-- src/utils/raceMechanics.js — performance formula, condition decay
+- src/utils/raceMechanics.js — performance formula, condition decay, odds
 - src/components/HorseList.vue — left panel, 20 horses with condition bars
 - src/components/RaceControls.vue — top bar, buttons and race info
-- src/components/RaceTrack.vue — center, animated lanes, distance ruler, pre-race odds
+- src/components/RaceTrack.vue — center, animated lanes, distance ruler, odds button
 - src/components/ResultsPanel.vue — right panel, race results and tournament winner
+- src/components/OddsModal.vue — pre-race betting modal (WIN, PLACE, EXACTA, TRIFECTA)
+- src/components/TournamentWinner.vue — confetti winner screen
 - src/App.vue — layout only, no logic
 
 ## What Not to Touch
@@ -82,6 +84,6 @@ These decisions were made deliberately by the developer — do not change withou
 ## Known Limitations
 
 - No persistence — refreshing resets tournament
-- Surge mechanic is visual only, not reflected in odds calculation
-- Odds based on condition only, stamina type not factored in (intentional for now)
+- Surge probability not reflected in pre-race odds
 - No sound effects (cut for scope)
+- No mobile responsive layout (cut for scope)
