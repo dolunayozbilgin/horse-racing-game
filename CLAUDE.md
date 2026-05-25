@@ -12,6 +12,8 @@ A tournament-style horse racing simulation built with Vue 3 + Pinia.
 - **All game state lives in `src/stores/raceStore.js`** — never scatter state across components
 - **All race math lives in `src/utils/raceMechanics.js`** — components never calculate outcomes
 - **Components are display-only** — they read from store, dispatch actions, render UI
+- **DRY** — if the same logic appears in two places, it belongs in `raceMechanics.js` or the store
+- **Single Responsibility** — each file has one job. If a function is growing too large, split it
 
 ## Core Spec (Locked — Never Change)
 
@@ -87,3 +89,4 @@ These decisions were made deliberately by the developer — do not change withou
 - Surge probability not reflected in pre-race odds
 - No sound effects (cut for scope)
 - No mobile responsive layout (cut for scope)
+- `startRace` in `RaceTrack.vue` handles too many responsibilities — should be extracted into a `useRaceAnimation.js` composable
